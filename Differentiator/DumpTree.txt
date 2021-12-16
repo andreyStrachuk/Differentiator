@@ -1,0 +1,30 @@
+digraph D {
+    13824 [fillcolor=purple, style="rounded,filled", label="*"];
+    13824 -> 13936;
+
+    13936 [fillcolor=cyan, style="rounded,filled", label="/"];
+    13936 -> 14160;
+
+    14160 [fillcolor=yellow, style="rounded,filled", label="1"];
+    13936 -> 14272;
+
+    14272 [fillcolor=cyan, style="rounded,filled", label="*"];
+    14272 -> 14384;
+
+    14384 [fillcolor=yellow, style="rounded,filled", label="2"];
+    14272 -> 14496;
+
+    14496 [fillcolor=cyan, style="rounded,filled", label="sqrt"];
+    14496 -> 14608;
+
+    14608 [fillcolor=cyan, style="rounded,filled", label="*"];
+    14608 -> 15360;
+
+    15360 [fillcolor=yellow, style="rounded,filled", label="x"];
+    14608 -> 15632;
+
+    15632 [fillcolor=yellow, style="rounded,filled", label="y"];
+    13824 -> 14048;
+
+    14048 [fillcolor=yellow, style="rounded,filled", label="x"];
+}

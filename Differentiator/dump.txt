@@ -1,0 +1,10 @@
+digraph D {
+    17232 [fillcolor=purple, style="rounded,filled", label="okl"];
+
+    17232 -> 1232;
+
+    1232 [fillcolor=yellow, style="rounded,filled", label=""];
+    17232 -> 1312;
+
+    1312 [fillcolor=yellow, style="rounded,filled", label=""];
+}
