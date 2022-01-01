@@ -8,14 +8,38 @@
 #include <stdlib.h>
 #include <math.h>
 
+static const char strSIN[] = "sin";
+static const char strCOS[] = "cos";
+static const char strLN[] = "ln";
+static const char strPI[] = "pi";
+static const char strE[] = "e";
+static const char strLG[] = "lg";
+static const char strSQRT[] = "sqrt";
+static const char strMUL[] = "*";
+static const char strDIV[] = "/";
+static const char strADD[] = "+";
+static const char strSUB[] = "-";
+static const char strDEG[] = "^";
+
 #define EPS 1e-6
 
 #define ASSERT_OK(smth, doSmth)         do { if (smth) { doSmth;}} while (0)
 
-#define STR_EQ(str1, str2)             (strncmp (str1, str2, strlen (str1)) == 0)
+#define STR_EQ(str1, str2)              (strncmp (str1, str2, strlen (str1)) == 0)
 
-#define DESTRUCT_TREE(node)                     DestructTree (node);                                            \
-                                                free (node);
+#define DESTRUCT_TREE(node)             DestructTree (node); \
+                                        free (node);
+
+#define CREATE_LEFT(diffNode)                               diffNode->left = (DiffNode *)calloc (1, sizeof (DiffNode)); \
+                                                            diffNode->left->parent = diffNode;
+
+#define CREATE_RIGHT(diffNode)                              diffNode->right = (DiffNode *)calloc (1, sizeof (DiffNode)); \
+                                                            diffNode->right->parent = diffNode;
+
+#define ALLOC_DATA_FOR_STR(diffNode, oper, type_t)          diffNode->data = calloc (strlen (oper) + 1, sizeof (char));  \
+                                                            diffNode->type = type_t;                                     \
+                                                            memcpy (diffNode->data, (void *)(&oper), strlen (oper) + 1);
+
 
 struct DiffNode {
     char type;

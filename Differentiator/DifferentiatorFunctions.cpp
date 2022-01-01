@@ -1,18 +1,5 @@
 #include "Differentiator.h"
 
-static const char strSIN[] = "sin";
-static const char strCOS[] = "cos";
-static const char strLN[] = "ln";
-static const char strPI[] = "pi";
-static const char strE[] = "e";
-static const char strLG[] = "lg";
-static const char strSQRT[] = "sqrt";
-static const char strMUL[] = "*";
-static const char strDIV[] = "/";
-static const char strADD[] = "+";
-static const char strSUB[] = "-";
-static const char strDEG[] = "^";
-
 
 int GetExp (char *exp, DiffNode **topNode) {
     assert (exp);
@@ -23,6 +10,9 @@ int GetExp (char *exp, DiffNode **topNode) {
     if (*topNode == nullptr) {
         *topNode = (DiffNode *)calloc(1, sizeof (DiffNode));
         exp++;
+    }
+    else {
+        return INCORRECT_INPUT;
     }
 
     DiffNode *node = *topNode;
@@ -128,7 +118,7 @@ void PreOrdSearch (DiffNode *node, DiffNode *childNode, FILE *file) {
     assert (childNode);
 
     fprintf (file, "    %lu -> %lu;\n\n", (unsigned long)node % 65536, (unsigned long)childNode % 65536);
-    // fprintf (file, "    %lu -> %lu;\n\n", (unsigned long)childNode % 65536, (unsigned long)childNode->parent % 65536);
+    fprintf (file, "    %lu -> %lu;\n\n", (unsigned long)childNode % 65536, (unsigned long)childNode->parent % 65536);
 
     if (childNode->left == nullptr) {
         fprintf (file, "    %lu [fillcolor=yellow, style=\"rounded,filled\", label=\"", (unsigned long)childNode % 65536);
@@ -306,20 +296,10 @@ void DestructTree (DiffNode *topNode) {
     }
 }
 
-#define CREATE_LEFT(diffNode)                               diffNode->left = (DiffNode *)calloc (1, sizeof (DiffNode)); \
-                                                            diffNode->left->parent = diffNode;
-
-#define CREATE_RIGHT(diffNode)                              diffNode->right = (DiffNode *)calloc (1, sizeof (DiffNode)); \
-                                                            diffNode->right->parent = diffNode;
-
-#define ALLOC_DATA_FOR_STR(diffNode, oper, type_t)          diffNode->data = calloc (strlen (oper) + 1, sizeof (char));                     \
-                                                            diffNode->type = type_t;                                      \
-                                                            memcpy (diffNode->data, (void *)(&oper), strlen (oper) + 1);
-
-
 int Differentiate (DiffNode *topNode, DiffNode *diffNode, const char *var) {
     assert (topNode);
     assert (diffNode);
+    assert (var);
 
     if (topNode->type == OPERATOR) {
         char op = *(char *)topNode->data;
@@ -497,7 +477,7 @@ int Differentiate (DiffNode *topNode, DiffNode *diffNode, const char *var) {
             PushNumberToNode (diffNode, 1);
         }
         else {
-           PushNumberToNode (diffNode,0);
+            PushNumberToNode (diffNode,0);
         }
 
         return OK;
@@ -693,6 +673,9 @@ void TexDump (DiffNode *topNode, DiffNode *diffNode) {
     fprintf (tex, "\\end{document}\n");
 
     fclose (tex);
+
+    system ("pdflatex texFile.tex");
+    system ("xdg-open texFile.pdf");
 }
 
 void TexDumpNode (DiffNode *node, FILE *tex) {
@@ -703,7 +686,12 @@ void TexDumpNode (DiffNode *node, FILE *tex) {
 
     switch (node->type) {
         case NUMBER: {
-            fprintf (tex, "{%lg}", *(double *)node->data);
+            if (*(double *)node->data < 0) {
+                fprintf (tex, "{(%lg)}", *(double *)node->data);
+            }
+            else {
+                fprintf (tex, "{%lg}", *(double *)node->data);
+            }
 
             break;
         }
@@ -816,11 +804,11 @@ void TexDumpNode (DiffNode *node, FILE *tex) {
             fprintf (tex, "\\%s", (char *)node->data);
 
             if (node->left->type != NUMBER && node->left->type != VARIABLE) {
-                fprintf (tex, "{");
+                fprintf (tex, "{(");
 
                 TexDumpNode (node->left, tex);
 
-                fprintf (tex, "}");
+                fprintf (tex, "})");
             }
             else {
                 TexDumpNode (node->left, tex);
@@ -964,6 +952,22 @@ int SimplifyNode (DiffNode *node) {
 
             return OK;
         }
+        if ((node->right->type == NUMBER) && DoubleComp (*(double *)node->right->data, 1) == EQUAL) {
+            DESTRUCT_TREE (node->right);
+            node->right = nullptr;
+
+            DiffNode *tmpNode = (DiffNode *)calloc (1, sizeof (DiffNode));
+            RecursiveCpy (tmpNode, node->left);
+
+            DESTRUCT_TREE (node->left);
+            node->left = nullptr;
+
+            RecursiveCpy (node, tmpNode);
+
+            DESTRUCT_TREE (tmpNode);
+
+            return OK;
+        }
     }
     if (node->type == OPERATOR && STR_EQ ((char *)node->data, strADD)) {
         if (node->left->type == NUMBER && DoubleComp (*(double *)node->left->data, 0) == EQUAL) {
@@ -1033,6 +1037,8 @@ int GetBuffer (char **buff, const char *fileName) {
 
     int fileSize = GetFileSize (sampleFile);
 
+    *buff = (char *)calloc (fileSize + 1, sizeof (char));
+
     fileSize = fread (*buff, sizeof (char), fileSize, sampleFile);
     fclose (sampleFile);
 
@@ -1057,38 +1063,63 @@ void PrintErrors (const int type) {
     }
 }
 
-void RunDifferentiation (char *sample) {
-    DiffNode *diffTree = (DiffNode *)calloc (1, sizeof (DiffNode));
+// void RunDifferentiation (char *sample) {
+//     DiffNode *diffTree = (DiffNode *)calloc (1, sizeof (DiffNode));
 
-    int res = GetExp (sample, &diffTree);
-    ASSERT_OK (res != OK, PrintErrors (res); return);
-    free (sample);
+//     int res = GetExp (sample, &diffTree);
+//     ASSERT_OK (res != OK, PrintErrors (res); return);
+//     free (sample);
 
-    while (1) {
-        printf ("1 - differentiate whole function\n2 - differentiate function by variable\n");
+//     while (1) {
+//         printf ("1 - differentiate whole function\n2 - differentiate function by variable\n");
 
-        int type = 0;
-        while (1) {
-            int res = scanf ("%d", &type);
+//         int type = 0;
+//         while (1) {
+//             int res = scanf ("%d", &type);
 
-            if (res == 0) {
-                while (getchar () != '\n') ;
-                printf ("Please, type 1 or 2!\n");
-            }
-            else {
-                break;
-            }
-        }
+//             if (res == 0) {
+//                 while (getchar () != '\n') ;
+//                 printf ("Please, type 1 or 2!\n");
+//             }
+//             else {
+//                 break;
+//             }
+//         }
 
-        switch (type) {
-            case 1: {
-                printf ("");
-            }
-        }
-    }
+//         switch (type) {
+//             case 2: {
+//                 printf ("Please, type the variable you want to differentiate your function by: ");
 
-        DiffNode *d = (DiffNode *)calloc (1, sizeof (DiffNode));
-        Differentiate (diffTree, d, "y");
+//                 char *var = nullptr;
+//                 while (1) {
+//                     scanf ("%ms", &str);
 
-        SimplifyNode (d);
-}
+//                     if (!isalpha (*str)) {
+//                         printf ("Please, type a VARIABLE!\n");
+
+//                         free (str);
+//                         continue;
+//                     }
+
+//                     *(str + 1) = '\0';
+
+//                     break;
+//                 }
+
+//                 DiffNode *d = (DiffNode *)calloc (1, sizeof (DiffNode));
+//                 Differentiate (diffTree, d, var);
+
+//                 free (var);
+
+//                 SimplifyNode (d);
+
+//                 TexDump (diffTree, d);
+
+//                 system ("pdflatex texFile.tex");
+//                 system ("xdg-open texFile.pdf");
+
+//                 break;
+//             }
+//         }
+//     }
+// }
